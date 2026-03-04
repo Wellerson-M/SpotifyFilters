@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Track {
+  id          String   @id @default(cuid())
+  spotifyId   String   @unique
+  name        String
+  albumName   String?
+  albumImageUrl String?
+  durationMs  Int
+  previewUrl  String?
+  importedAt  DateTime @default(now())
+  artistId    String?
+  importRunId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  artist              Artist?              @relation(fields: [artistId], references: [id], onDelete: SetNull)
+  audioFeatures       AudioFeatures?
+  vibeAnalysis        VibeAnalysis?
+  playlistSuggestions PlaylistSuggestion[]
+  importRun           ImportRun?           @relation(fields: [importRunId], references: [id], onDelete: SetNull)
+}
+
+model Artist {
+  id         String   @id @default(cuid())
+  spotifyId  String   @unique
+  name       String
+  genres     Json?
+  popularity Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tracks Track[]
+}
+
+model AudioFeatures {
+  id               String   @id @default(cuid())
+  trackId          String   @unique
+  danceability     Float
+  energy           Float
+  key              Int
+  loudness         Float
+  mode             Int
+  speechiness      Float
+  acousticness     Float
+  instrumentalness Float
+  liveness         Float
+  valence          Float
+  tempo            Float
+  timeSignature    Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  track Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+}
+
+model VibeAnalysis {
+  id            String   @id @default(cuid())
+  trackId       String   @unique
+  mood          String
+  confidence    Float?
+  tags          Json?
+  summary       String?
+  model         String?
+  modelName     String?
+  promptVersion String?
+  embedding     Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  track Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+}
+
+model PlaylistSuggestion {
+  id          String   @id @default(cuid())
+  name        String
+  title       String?
+  description String?
+  trackIds    Json?    @map("track_ids")
+  spotifyPlaylistId  String?
+  spotifyPlaylistUrl String?
+  lastSyncedAt       DateTime?
+  seedTrackId String?
+  score       Float?
+  rationale   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  seedTrack Track? @relation(fields: [seedTrackId], references: [id], onDelete: SetNull)
+}
+
+model ImportRun {
+  id            String    @id @default(cuid())
+  source        String    @default("spotify")
+  status        String    @default("pending")
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  totalTracks   Int       @default(0)
+  createdTracks Int       @default(0)
+  updatedTracks Int       @default(0)
+  errorMessage  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tracks Track[]
+}
+
+model AuthToken {
+  id            String   @id @default(cuid())
+  provider      String   @unique @default("spotify")
+  spotifyUserId String?
+  accessToken   String
+  refreshToken  String
+  tokenType     String
+  scope         String?
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
