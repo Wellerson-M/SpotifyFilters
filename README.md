@@ -1,110 +1,84 @@
 # Spotify Filters
 
-Aplicação para organizar músicas curtidas do Spotify e transformar isso em sugestões de playlists com apoio de IA.
+Aplicação web que lê as músicas curtidas de uma conta do Spotify, classifica a vibe de cada faixa e devolve isso agrupado em playlists sugeridas — que podem ser criadas direto na conta.
 
-Stack principal:
-- Next.js (App Router) + TypeScript
-- Prisma + SQLite
-- Spotify Web API (OAuth PKCE)
-- OpenAI API (modo automático) e fluxo manual via ChatGPT
+O login é feito pelo próprio Spotify (OAuth PKCE): a aplicação manda para a tela de autorização e, na volta, usa o token para puxar a biblioteca pela Web API.
 
-## Ideia do projeto
+**Stack:** Next.js (App Router) · TypeScript · Prisma + SQLite · Spotify Web API · OpenAI API
 
-O app importa suas músicas curtidas, enriquece dados musicais, classifica vibe e sugere playlists.
-Você pode:
-- usar IA automática (OpenAI API), ou
-- usar modo manual (exporta pacote, pede sugestão no ChatGPT e importa o retorno).
+![Painel principal](docs/01-painel.png)
 
-Também existe fluxo para atualizar playlists existentes com músicas novas.
+## Dois modos de análise
+
+**Automático** — com uma `OPENAI_API_KEY` configurada, a própria aplicação analisa cada faixa e gera tags, descrição e embedding da vibe.
+
+**Manual** — para usar sem API paga. A aplicação exporta um JSON com os dados das faixas, você joga esse arquivo em qualquer chat de IA e cola o retorno de volta. O formato de saída é o mesmo que o modo automático produz, então o resto do fluxo não muda.
+
+![Playlists sugeridas](docs/02-sugestoes.png)
 
 ## Funcionalidades
 
-- Login Spotify com OAuth PKCE
-- Importação de curtidas com paginação
-- Persistência de tracks/artists/features em SQLite
+- Login no Spotify com OAuth PKCE
+- Importação das curtidas com paginação
+- Persistência de tracks, artists e audio features em SQLite
 - Análise de vibe por faixa (tags, resumo, embedding)
 - Sugestão de playlists por clustering
-- Criação de playlists no Spotify
-- Edição/exclusão de sugestões
-- Atualização de playlists existentes com novas músicas
-- Exportação/importação manual para ChatGPT
-- Limpeza de playlists de debug (`_debug`)
+- Criação das playlists selecionadas na conta do Spotify
+- Edição e exclusão de sugestões antes de criar
+- Atualização de playlists já existentes com as músicas novas
+- Exportação e importação do pacote manual
+- Limpeza das playlists de debug (`_debug`)
 
-## Fluxo recomendado
+## Fluxo
 
 1. Conectar Spotify
 2. Importar curtidas
-3. Buscar características (Spotify)
-4. Analisar vibe com IA (ou usar fluxo manual)
+3. Buscar características de áudio
+4. Analisar vibe com IA — ou usar o modo manual
 5. Sugerir playlists
-6. Criar selecionadas
-7. Quando tiver músicas novas: importar novamente e usar "Atualizar existentes"
+6. Criar as selecionadas
+7. Quando surgirem músicas novas: importar de novo e usar **Atualizar existentes**
 
-## Setup local
-
-1. Instalar dependências:
+## Rodando local
 
 ```bash
 npm install
-```
-
-2. Copiar o ambiente:
-
-```bash
 copy .env.example .env
 ```
 
-3. Ajustar variáveis no `.env`:
-- `DATABASE_URL`
-- `SPOTIFY_CLIENT_ID`
-- `SPOTIFY_REDIRECT_BASE_URL`
-- `OPENAI_API_KEY` (se for usar modo automático)
+Variáveis do `.env`:
 
-4. Rodar migrations:
+| Variável | Para quê |
+|---|---|
+| `DATABASE_URL` | Caminho do SQLite |
+| `SPOTIFY_CLIENT_ID` | Client ID do app no Spotify Developer Dashboard |
+| `SPOTIFY_REDIRECT_BASE_URL` | Base do redirect de callback do OAuth |
+| `OPENAI_API_KEY` | Só no modo automático |
+
+Depois:
 
 ```bash
 npm run prisma:migrate
-```
-
-5. Iniciar app:
-
-```bash
 npm run dev
 ```
-URL: `http://127.0.0.1:3001`
 
-ou (limpando cache `.next`):
+A aplicação sobe em `http://127.0.0.1:3001`.
 
-```bash
-npm run dev:clean
-```
-URL: `http://127.0.0.1:3001`
-
-Para rodar em modo producao local:
-
-```bash
-npm run build
-npm run start
-```
-URL: `http://127.0.0.1:3001`
+Para limpar o cache do `.next` antes de subir, use `npm run dev:clean`. Para produção local, `npm run build` e `npm run start`.
 
 ## Scripts
 
-- `npm run dev`
-- `npm run dev:clean`
-- `npm run build`
-- `npm run start`
-- `npm run test`
-- `npm run prisma:migrate`
-- `npm run prisma:studio`
+`dev` · `dev:clean` · `build` · `start` · `test` · `prisma:migrate` · `prisma:studio`
 
-## Endpoints principais
+## Endpoints
 
-- Auth: `/api/auth/login`, `/api/auth/callback`, `/api/auth/me`, `/api/auth/logout`
-- Import: `/api/import/liked`
-- Enriquecimento: `/api/enrich/audio-features`
-- Análise: `/api/analyze/vibe`
-- Sugestões: `/api/playlists/suggest`, `/api/playlists/suggest/[id]`
-- Criação/sincronização: `/api/playlists/create`, `/api/playlists/sync-existing`
-- Manual ChatGPT: `/api/manual/chatgpt-export`, `/api/manual/chatgpt-import`
-- Utilitários: `/api/playlists/cleanup-debug`, `/api/health`
+| Área | Rotas |
+|---|---|
+| Auth | `/api/auth/login`, `/api/auth/callback`, `/api/auth/me`, `/api/auth/logout` |
+| Importação | `/api/import/liked` |
+| Enriquecimento | `/api/enrich/audio-features` |
+| Análise | `/api/analyze/vibe` |
+| Sugestões | `/api/playlists/suggest`, `/api/playlists/suggest/[id]` |
+| Criação e sincronização | `/api/playlists/create`, `/api/playlists/sync-existing` |
+| Modo manual | `/api/manual/chatgpt-export`, `/api/manual/chatgpt-import` |
+| Utilitários | `/api/playlists/cleanup-debug`, `/api/health` |
